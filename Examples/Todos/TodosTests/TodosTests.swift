@@ -12,7 +12,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -45,7 +46,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -78,7 +80,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -116,7 +119,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -153,7 +157,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -191,7 +196,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -230,7 +236,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -270,7 +277,8 @@ class TodosTests: XCTestCase {
       reducer: appReducer,
       environment: AppEnvironment(
         mainQueue: self.scheduler.eraseToAnyScheduler(),
-        uuid: UUID.incrementing
+        uuid: UUID.incrementing,
+        updateQuickActions: { _ in }
       )
     )
 
@@ -283,6 +291,56 @@ class TodosTests: XCTestCase {
       }
     )
   }
+    
+    func testQuickActions() {
+        var quickActionsHistory: [[UIApplicationShortcutItem]?] = []
+        
+        let store = TestStore(
+          initialState: AppState(),
+          reducer: appReducer,
+          environment: AppEnvironment(
+            mainQueue: self.scheduler.eraseToAnyScheduler(),
+            uuid: UUID.incrementing,
+            updateQuickActions: { quickActionsHistory.append($0) }
+          )
+        )
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
+        store.assert(
+            .send(.addTodoButtonTapped) {
+                $0.todos.insert(
+                    Todo(
+                        description: "",
+                        id:  id,
+                        isComplete: false
+                    ),
+                    at: 0
+                )
+            },
+            .do {
+                XCTAssertEqual(quickActionsHistory.count, 1)
+            },
+            .send(.todo(id: id, action: .textFieldChanged("Cookies"))) {
+                $0.todos[0].description = "Cookies"
+            },
+            .do {
+                XCTAssertEqual(quickActionsHistory.count, 2)
+                XCTAssertEqual(quickActionsHistory[1]?[0].localizedTitle, "Cookies")
+            },
+            .send(.handleQuickAction(todoId: id)) { _ in
+                XCTAssertEqual(quickActionsHistory.count, 2)
+            },
+            .receive(.todo(id: id, action: .checkBoxToggled)) {
+                $0.todos[0].isComplete = true
+            },
+            .do {
+                XCTAssertEqual(quickActionsHistory.count, 3)
+                XCTAssertTrue(quickActionsHistory[2]!.isEmpty)
+            },
+            .do { self.scheduler.advance(by: 1) },
+            .receive(.sortCompletedTodos)
+        )
+    }
 }
 
 extension UUID {

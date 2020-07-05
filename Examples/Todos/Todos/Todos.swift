@@ -30,11 +30,13 @@ enum AppAction: Equatable {
   case move(IndexSet, Int)
   case sortCompletedTodos
   case todo(id: UUID, action: TodoAction)
+    case handleQuickAction(todoId: UUID)
 }
 
 struct AppEnvironment {
   var mainQueue: AnySchedulerOf<DispatchQueue>
   var uuid: () -> UUID
+    var updateQuickActions: ([UIApplicationShortcutItem]?) -> ()
 }
 
 let appReducer = Reducer<AppState, AppAction, AppEnvironment>.combine(
@@ -77,6 +79,9 @@ let appReducer = Reducer<AppState, AppAction, AppEnvironment>.combine(
 
     case .todo:
       return .none
+        
+    case .handleQuickAction:
+        return .none
     }
   },
   todoReducer.forEach(
@@ -85,7 +90,7 @@ let appReducer = Reducer<AppState, AppAction, AppEnvironment>.combine(
     environment: { _ in TodoEnvironment() }
   )
 )
-
+.quickActionable()
 .debugActions(actionFormat: .labelsOnly)
 
 struct AppView: View {
@@ -191,7 +196,8 @@ struct AppView_Previews: PreviewProvider {
         reducer: appReducer,
         environment: AppEnvironment(
           mainQueue: DispatchQueue.main.eraseToAnyScheduler(),
-          uuid: UUID.init
+          uuid: UUID.init,
+          updateQuickActions: { _ in }
         )
       )
     )
